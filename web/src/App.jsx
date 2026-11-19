@@ -2,7 +2,7 @@ import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useStat
 import { PEOPLE, api, loadAuth, saveAuth } from './api.js';
 import { REST_DAYS, drawPool, loadDrawOpts, loadVetoes, pick, saveDrawOpts, saveVetoes } from './draw.js';
 import {
-  Dices, Heart, History as HistoryIcon, List, LocateFixed, Map as MapIcon, Plus, Search, Settings, SlidersHorizontal, Star, X,
+  Heart, History as HistoryIcon, List, Map as MapIcon, Plus, Search, Settings, SlidersHorizontal, Star, X,
 } from 'lucide-react';
 import { nowSP, openStatus } from './hours.js';
 import {
@@ -65,11 +65,6 @@ function DrawOptions({ opts, onChange, vetoed, onClearVetoes, pool, total, onClo
     </Modal>
   );
 }
-
-// "quinta-feira, 19 de novembro" in São Paulo time, for the red ribbon at the top.
-const TODAY_FMT = new Intl.DateTimeFormat('pt-BR', {
-  timeZone: 'America/Sao_Paulo', weekday: 'long', day: 'numeric', month: 'long',
-});
 
 const byCountThenName =(a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0]), 'pt-BR');
 const byName = (a, b) => String(a[0]).localeCompare(String(b[0]), 'pt-BR');
@@ -453,13 +448,10 @@ export default function App() {
   return (
     <div className={`app ${panelOpen ? 'panel-open' : ''}`}>
       <p className="ribbon">
-        {places
-          ? `${places.length} lugares · ${withDist.filter((p) => p.openNow).length} abertos agora · ${TODAY_FMT.format(new Date())}`
-          : TODAY_FMT.format(new Date())}
+        {places ? `${withDist.filter((p) => p.openNow).length} lugares abertos agora` : '\u00a0'}
       </p>
       <div className="masthead">
         <a className="wordmark" href="/">Bora Comer</a>
-        <p className="masthead-fine">o guia de restaurantes de Ciskow e Andkiwii</p>
       </div>
       <header className="top">
         <label className="search">
@@ -505,10 +497,10 @@ export default function App() {
               </button>
               <Chip active={f.open} onClick={() => set({ open: !f.open })}>Aberto agora</Chip>
               <Chip active={f.near === 'me'} onClick={() => (f.near === 'me' ? set({ near: '', radius: 0 }) : locate())}>
-                <LocateFixed size={15} aria-hidden="true" /> Perto de mim
+                Perto de mim
               </Chip>
               <Chip active={f.fav} onClick={() => set({ fav: !f.fav })}>
-                <Heart size={14} fill={f.fav ? 'currentColor' : 'none'} aria-hidden="true" /> Favoritos
+                Favoritos
               </Chip>
               <Chip active={f.status === 'quero'} onClick={() => set({ status: f.status === 'quero' ? '' : 'quero' })}>
                 Queremos ir
@@ -521,7 +513,7 @@ export default function App() {
             </div>
             <div className="draw-group desktop-only">
               <button type="button" className="btn btn-small btn-primary draw" onClick={() => draw()} disabled={!list.length}>
-                <Dices size={16} aria-hidden="true" /> Sortear
+                Sortear
               </button>
               <button
                 type="button" className="btn btn-small btn-primary draw-more" aria-label="Opções do sorteio" title="Opções do sorteio"
@@ -609,7 +601,7 @@ export default function App() {
       {/* The history looks back, not ahead: no Sortear button over it on the phone. */}
       {view !== 'historico' && (
         <button type="button" className="fab" onClick={() => draw()} disabled={!list.length}>
-          <Dices size={20} aria-hidden="true" /> Sortear
+          Sortear
         </button>
       )}
 

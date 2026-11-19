@@ -125,7 +125,6 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   font: 400 clamp(3rem, 8.5vw, 6rem)/0.92 var(--display); letter-spacing: -0.03em;
   color: var(--ink); text-decoration: none;
 }
-.masthead-fine { font: 0.95rem/1.25 var(--fine); color: var(--muted); text-align: right; max-width: 22ch; padding-bottom: 6px; }
 
 .top {
   position: sticky; top: 0; z-index: 5;
@@ -435,7 +434,6 @@ input[type='date'] { width: auto; }
   .mobile-only { display: inline-flex; }
   .ribbon { font-size: 0.95rem; padding-inline: 12px; }
   .masthead { padding: 14px 16px 10px; }
-  .masthead-fine { display: none; }
   .top { gap: 8px; padding-inline: 12px; }
   .top-add { width: 38px; padding: 0; }
 

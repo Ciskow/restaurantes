@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, LocateFixed, X } from 'lucide-react';
+import { ChevronDown, X } from 'lucide-react';
 import { RADII, STATUS, WHO, activeCount } from './filters.js';
 import { Chip, Stars, Switch } from './ui.jsx';
 
@@ -66,7 +66,7 @@ export default function FilterPanel({
           <h3>Distância</h3>
           <div className="chips">
             <Chip active={f.near === 'me'} onClick={() => (f.near === 'me' ? set({ near: '', radius: 0 }) : onLocate())}>
-              <LocateFixed size={15} aria-hidden="true" /> Perto de mim
+              Perto de mim
             </Chip>
           </div>
           {f.near === 'me' && gps.state === 'loading' && <p className="hint">Pegando sua localização…</p>}

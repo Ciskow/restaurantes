@@ -29,18 +29,7 @@ export const SORTS = [
 
 export const RADII = [1, 2, 3, 5, 10, 20];
 
-const EMOJI = {
-  hamburgueria: '🍔', hamburguer: '🍔', arabe: '🥙', contemporaneo: '🍽️', nordestino: '🌵', brasileiro: '🍛',
-  churrascaria: '🥩', frances: '🥐', japones: '🍣', indiano: '🫓', pizzaria: '🍕', 'cafe / padaria': '☕',
-  cafe: '☕', padaria: '🥖', 'frutos do mar': '🦐', italiano: '🍝', tailandes: '🌶️', chines: '🥟', coreano: '🍲',
-  'boteco / bar': '🍺', bar: '🍺', boteco: '🍺', 'doceria / sorveteria': '🍨', doceria: '🍰', sorveteria: '🍨',
-  vietnamita: '🍜', asiatico: '🥢', espanhol: '🥘', lanchonete: '🥪', 'vegetariano / vegano': '🥗',
-  vegetariano: '🥗', vegano: '🥗', peruano: '🐟', grego: '🫒', mediterraneo: '🍋', havaiano: '🍍',
-  judaico: '🥯', mexicano: '🌮', ramen: '🍜', sushi: '🍣',
-};
-
 export const norm = (s) => String(s ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
-export const emoji = (category) => EMOJI[norm(category)] || '🍴';
 
 export function km(a, b) {
   const rad = (d) => (d * Math.PI) / 180;

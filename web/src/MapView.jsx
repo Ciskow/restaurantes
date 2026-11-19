@@ -1,8 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
-import { LocateFixed } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
-import { avgRating, formatKm } from './filters.js';
 
 export const statusOf = (p) => (p.visited ? 'fomos' : p.want ? 'quero' : 'novo');
 const GLYPH = { fomos: '✓', quero: '♡', novo: '' };
@@ -29,16 +27,9 @@ function popup(p, onOpen) {
     return node;
   };
   add('strong', p.name);
-  const avg = avgRating(p);
-  const meta = [
-    p.categories.join(' · '),
-    p.bairro || p.city,
-    p.price ? '$'.repeat(p.price) : '',
-    avg != null ? `★ ${avg.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}` : '',
-    p.dist != null ? formatKm(p.dist) : '',
-    p.status ? p.status.text : '',
-  ].filter(Boolean).join(' · ');
+  const meta = [p.categories.slice(0, 2).join(', '), p.bairro || p.city].filter(Boolean).join(' · ');
   if (meta) add('span', meta);
+  if (p.status) add('span', p.status.text);
   if (p.geo_approx) add('span', 'Localização aproximada', 'map-pop-note');
   add('button', 'Ver detalhes', 'btn btn-small btn-primary').addEventListener('click', () => onOpen(p.id));
   return el;
@@ -115,7 +106,7 @@ export default function MapView({ places, me, onOpen, onLocate, openOnly, onOpen
           <input type="checkbox" checked={openOnly} onChange={(e) => onOpenOnly(e.target.checked)} />
           Só abertos agora
         </label>
-        <button type="button" className="btn btn-small map-me" onClick={goToMe}><LocateFixed size={15} aria-hidden="true" /> Onde estou</button>
+        <button type="button" className="btn btn-small map-me" onClick={goToMe}>Onde estou</button>
       </div>
       {openOnly && unknownHours > 0 && (
         <p className="hint">

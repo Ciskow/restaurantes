@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Camera, Clock, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { PEOPLE, api, shrinkPhoto } from './api.js';
 import { DAYS, normalizeDay } from './hours.js';
 import { Modal, Stars, TagInput } from './ui.jsx';
@@ -217,7 +217,7 @@ export default function PlaceForm({ place, auth, options, onSave, onDelete, onVi
               id="f-cats" value={d.categories} suggestions={options.cats}
               onChange={(categories) => set({ categories })} placeholder="Italiano, Pizzaria…"
             />
-            <small>Um lugar pode ter vários. Enter ou vírgula para adicionar.</small>
+            <small>Enter ou vírgula para adicionar.</small>
           </div>
 
           <div className="field">
@@ -258,7 +258,7 @@ export default function PlaceForm({ place, auth, options, onSave, onDelete, onVi
           </label>
 
           <div className="field">
-            <span>Coordenadas (para o filtro de distância)</span>
+            <span>Coordenadas</span>
             <div className="coords">
               <input aria-label="Latitude" inputMode="decimal" placeholder="Latitude" value={d.lat} onChange={(e) => set({ lat: e.target.value })} />
               <input aria-label="Longitude" inputMode="decimal" placeholder="Longitude" value={d.lng} onChange={(e) => set({ lng: e.target.value })} />
@@ -277,7 +277,7 @@ export default function PlaceForm({ place, auth, options, onSave, onDelete, onVi
                 type="button" className="chip" aria-pressed={!!d.hours}
                 onClick={() => set({ hours: d.hours ? null : Array(7).fill('') })}
               >
-                <Clock size={15} aria-hidden="true" /> {d.hours ? 'Horário informado' : 'Informar horário'}
+                {d.hours ? 'Horário informado' : 'Informar horário'}
               </button>
               {d.hours && (
                 <button type="button" className="btn btn-small" onClick={() => set({ hours: Array(7).fill(d.hours[1]) })}>
@@ -391,7 +391,7 @@ export default function PlaceForm({ place, auth, options, onSave, onDelete, onVi
             />
             <div className="input-row">
               <button type="button" className="btn btn-small" disabled={working === 'photos'} onClick={() => fileInput.current.click()}>
-                <Camera size={16} aria-hidden="true" /> {working === 'photos' ? 'Enviando…' : 'Enviar fotos'}
+                {working === 'photos' ? 'Enviando…' : 'Enviar fotos'}
               </button>
               <input
                 aria-label="Link de uma foto" placeholder="ou cole o link de uma foto" value={photoUrl}
@@ -400,7 +400,7 @@ export default function PlaceForm({ place, auth, options, onSave, onDelete, onVi
               />
               {photoUrl && <button type="button" className="btn btn-small" onClick={addPhotoUrl}>Adicionar</button>}
             </div>
-            <small role="status">{photoMsg || 'Também dá para colar (Ctrl+V) ou arrastar uma imagem em qualquer lugar deste formulário.'}</small>
+            <small role="status">{photoMsg || 'Também dá para colar (Ctrl+V) ou arrastar uma imagem.'}</small>
           </div>
 
           <fieldset className="field form-ratings">

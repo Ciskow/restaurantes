@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, CalendarPlus, Dices, Globe, Heart, Instagram, MapPin, Navigation, Pencil, Settings, Trash2 } from 'lucide-react';
+import { ArrowLeft, Globe, Heart, Instagram, MapPin, Pencil, Settings, Trash2 } from 'lucide-react';
 import { PEOPLE, api } from './api.js';
 import { dayKey } from './draw.js';
 import { formatKm } from './filters.js';
@@ -69,7 +69,7 @@ function Visits({ place: p, onVisit }) {
         <h3 id="visits-title">Visitas{visits.length > 0 && <span className="section-n"> · {visits.length}</span>}</h3>
         {editing !== 'new' && (
           <button type="button" className="btn btn-small" onClick={() => setEditing('new')}>
-            <CalendarPlus size={16} aria-hidden="true" /> Registrar visita
+            Registrar visita
           </button>
         )}
       </div>
@@ -176,7 +176,7 @@ export default function PlaceDetail({
 
       {drawn && (
         <div className="drawn">
-          <span><Dices size={17} aria-hidden="true" /> Sorteado entre {drawn.count} {drawn.count === 1 ? 'lugar' : 'lugares'}</span>
+          <span>Sorteado entre {drawn.count} {drawn.count === 1 ? 'lugar' : 'lugares'}</span>
           <span className="drawn-actions">
             {drawn.count > 1 && (
               <>
@@ -196,7 +196,7 @@ export default function PlaceDetail({
           <h2>{p.name}</h2>
           <p className="detail-status detail-meta">
             {p.categories.length > 0 && <span>{p.categories.join(', ')}</span>}
-            {where && <span>{where}</span>}
+            {(p.bairro || p.city) && <span>{[p.bairro, p.city !== 'São Paulo' ? p.city : ''].filter(Boolean).join(', ') || p.city}</span>}
             {p.price ? <span><Price value={p.price} /></span> : null}
           </p>
           {(p.status || p.dist != null) && (
@@ -209,7 +209,7 @@ export default function PlaceDetail({
 
         <div className="actions">
           <a className="btn btn-primary" href={maps.route} target="_blank" rel="noreferrer">
-            <Navigation size={16} aria-hidden="true" /> Como chegar
+            Como chegar
           </a>
           <a className="btn btn-icon" href={maps.view} target="_blank" rel="noreferrer" aria-label="Ver no Google Maps" title="Ver no Google Maps">
             <MapPin size={18} />
@@ -277,7 +277,7 @@ export default function PlaceDetail({
           <h3>Endereço</h3>
           <p>{p.address || where || 'Sem endereço cadastrado'}</p>
           {p.lat == null && <p className="hint">Sem coordenadas: este lugar não aparece nos filtros de distância.</p>}
-          {p.lat != null && p.geo_approx && <p className="hint">Localização aproximada (pelo bairro ou pela rua).</p>}
+          {p.lat != null && p.geo_approx && <p className="hint">Localização aproximada.</p>}
         </section>
 
         {p.hours.length === 7 && (
