@@ -1,5 +1,5 @@
 // Offline support: the app shell, the last list of places and uploaded photos stay on the device.
-const CACHE = 'bora-comer-v2';
+const CACHE = 'bora-comer-v3';
 const SHELL = ['/', '/icon.svg', '/icon-192.png', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

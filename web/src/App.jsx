@@ -66,6 +66,11 @@ function DrawOptions({ opts, onChange, vetoed, onClearVetoes, pool, total, onClo
   );
 }
 
+// "quinta-feira, 19 de novembro" in São Paulo time, for the red ribbon at the top.
+const TODAY_FMT = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: 'America/Sao_Paulo', weekday: 'long', day: 'numeric', month: 'long',
+});
+
 const byCountThenName =(a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0]), 'pt-BR');
 const byName = (a, b) => String(a[0]).localeCompare(String(b[0]), 'pt-BR');
 const uniq = (values) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -162,6 +167,7 @@ function Row({ p, onOpen }) {
           {rated && PEOPLE.map((person) => p[person.field] != null && (
             <span key={person.id} className={`score who-${person.id}`} title={`Nota de ${person.label}`}>
               <span className="sr-only">{person.label}: </span>
+              <span className="score-who" aria-hidden="true">{person.label[0]}</span>
               {p[person.field].toLocaleString('pt-BR')} <Star size={12} fill="currentColor" aria-hidden="true" />
             </span>
           ))}
@@ -446,11 +452,16 @@ export default function App() {
 
   return (
     <div className={`app ${panelOpen ? 'panel-open' : ''}`}>
+      <p className="ribbon">
+        {places
+          ? `${places.length} lugares · ${withDist.filter((p) => p.openNow).length} abertos agora · ${TODAY_FMT.format(new Date())}`
+          : TODAY_FMT.format(new Date())}
+      </p>
+      <div className="masthead">
+        <a className="wordmark" href="/">Bora Comer</a>
+        <p className="masthead-fine">o guia de restaurantes de Ciskow e Andkiwii</p>
+      </div>
       <header className="top">
-        <a className="brand" href="/" aria-label="Bora Comer, início">
-          <img src="/icon.svg" alt="" width="28" height="28" />
-          <span>Bora Comer</span>
-        </a>
         <label className="search">
           <span className="sr-only">Buscar</span>
           <Search size={16} aria-hidden="true" />

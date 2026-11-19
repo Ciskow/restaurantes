@@ -164,10 +164,14 @@ export default function PlaceDetail({
         </span>
       </div>
 
-      <div className={`gallery ${p.photos.length > 1 ? 'gallery-many' : ''}`}>
-        {(p.photos.length ? p.photos : ['']).map((src, i) => (
-          <Photo key={src || i} src={src} alt={i === 0 ? `Foto de ${p.name}` : ''} />
-        ))}
+      <div className="detail-hero">
+        <div className={`gallery ${p.photos.length > 1 ? 'gallery-many' : ''}`}>
+          {(p.photos.length ? p.photos : ['']).map((src, i) => (
+            <Photo key={src || i} src={src} alt={i === 0 ? `Foto de ${p.name}` : ''} />
+          ))}
+        </div>
+        {/* Decoration only: the banner below says the same in words. */}
+        {drawn && <span className="stamp" aria-hidden="true">Sorteado</span>}
       </div>
 
       {drawn && (
