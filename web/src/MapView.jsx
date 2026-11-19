@@ -100,11 +100,17 @@ export default function MapView({ places, me, onOpen, onLocate, openOnly, onOpen
 
   return (
     <div className="map-wrap">
+      {/* Above the map, so the phone's Sortear button never sits on top of it. */}
+      <ul className="map-legend" aria-label="Legenda">
+        {LEGEND.map(([id, label]) => (
+          <li key={id}><span className={`pin pin-${id}`} aria-hidden="true">{GLYPH[id]}</span> {label}</li>
+        ))}
+      </ul>
       <div className="map-box">
         <div ref={box} className="map" role="application" aria-label="Mapa dos lugares filtrados" />
         <label className="map-open">
           <input type="checkbox" checked={openOnly} onChange={(e) => onOpenOnly(e.target.checked)} />
-          Só abertos agora
+          Aberto agora
         </label>
         <button type="button" className="btn btn-small map-me" onClick={goToMe}>Onde estou</button>
       </div>
@@ -113,11 +119,6 @@ export default function MapView({ places, me, onOpen, onLocate, openOnly, onOpen
           {unknownHours} {unknownHours === 1 ? 'lugar ficou de fora por não ter' : 'lugares ficaram de fora por não terem'} horário cadastrado.
         </p>
       )}
-      <ul className="map-legend" aria-label="Legenda">
-        {LEGEND.map(([id, label]) => (
-          <li key={id}><span className={`pin pin-${id}`} aria-hidden="true">{GLYPH[id]}</span> {label}</li>
-        ))}
-      </ul>
       {shown.length < places.length && (
         <p className="hint map-missing">
           {places.length - shown.length} {places.length - shown.length === 1 ? 'lugar sem coordenadas não aparece' : 'lugares sem coordenadas não aparecem'} no mapa.

@@ -180,7 +180,7 @@ export default function PlaceDetail({
           <span className="drawn-actions">
             {drawn.count > 1 && (
               <>
-                <button type="button" className="btn btn-small" onClick={() => onVeto(p.id)} title="Tira este lugar dos sorteios de hoje">Hoje não</button>
+                <button type="button" className="btn btn-small" onClick={() => onVeto(p.id)} title="Tira este lugar dos sorteios de hoje e sorteia outro">Vetar hoje</button>
                 <button type="button" className="btn btn-small" onClick={onDrawAgain}>Sortear outro</button>
               </>
             )}
@@ -276,7 +276,7 @@ export default function PlaceDetail({
         <section className="section">
           <h3>Endereço</h3>
           <p>{p.address || where || 'Sem endereço cadastrado'}</p>
-          {p.lat == null && <p className="hint">Sem coordenadas: este lugar não aparece nos filtros de distância.</p>}
+          {p.lat == null && <p className="hint">Sem coordenadas: este lugar não aparece no mapa nem nos filtros de distância.</p>}
           {p.lat != null && p.geo_approx && <p className="hint">Localização aproximada.</p>}
         </section>
 

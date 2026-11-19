@@ -294,6 +294,7 @@ export default function PlaceForm({ place, auth, options, onSave, onDelete, onVi
               id="f-kws" value={d.keywords} suggestions={options.kws}
               onChange={(keywords) => set({ keywords })} placeholder="date, fila, pet friendly…"
             />
+            <small>Enter ou vírgula para adicionar.</small>
           </div>
 
           {/* Below: what a pasted link usually fills in. */}
@@ -305,7 +306,7 @@ export default function PlaceForm({ place, auth, options, onSave, onDelete, onVi
           </label>
 
           <div className="field">
-            <label htmlFor="f-cats">Tipos de comida</label>
+            <label htmlFor="f-cats">Tipo de comida</label>
             <TagInput
               id="f-cats" value={d.categories} suggestions={options.cats}
               onChange={(categories) => set({ categories })} placeholder="Italiano, Pizzaria…"
@@ -365,16 +366,26 @@ export default function PlaceForm({ place, auth, options, onSave, onDelete, onVi
 
           <fieldset className="field">
             <legend>Horário de funcionamento</legend>
+            {/* Adding hours is one tap; removing them asks first, since it clears all seven days at once. */}
             <div className="chips">
-              <button
-                type="button" className="chip" aria-pressed={!!d.hours}
-                onClick={() => set({ hours: d.hours ? null : Array(7).fill('') })}
-              >
-                {d.hours ? 'Horário informado' : 'Informar horário'}
-              </button>
-              {d.hours && (
-                <button type="button" className="btn btn-small" onClick={() => set({ hours: Array(7).fill(d.hours[1]) })}>
-                  Repetir segunda em todos os dias
+              {d.hours ? (
+                <>
+                  <button type="button" className="btn btn-small" onClick={() => set({ hours: Array(7).fill(d.hours[1]) })}>
+                    Repetir segunda em todos os dias
+                  </button>
+                  <button
+                    type="button" className="link"
+                    onClick={() => {
+                      if (d.hours.some((h) => h.trim()) && !window.confirm('Apagar o horário dos 7 dias?')) return;
+                      set({ hours: null });
+                    }}
+                  >
+                    Remover horário
+                  </button>
+                </>
+              ) : (
+                <button type="button" className="btn btn-small" onClick={() => set({ hours: Array(7).fill('') })}>
+                  Informar horário
                 </button>
               )}
             </div>

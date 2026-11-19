@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, X } from 'lucide-react';
 import { RADII, STATUS, WHO, activeCount } from './filters.js';
 import { Chip, Stars, Switch } from './ui.jsx';
@@ -32,7 +32,7 @@ function Facet({ title, selected, options, onChange, render = (v) => v, open }) 
         ))}
         {long && (
           <button type="button" className="chip" onClick={() => setAll(!all)}>
-            {all ? 'Mostrar menos' : `+ ${options.length - shown.length}`}
+            {all ? 'Mostrar menos' : `Mais ${options.length - shown.length}`}
           </button>
         )}
       </div>
@@ -41,16 +41,25 @@ function Facet({ title, selected, options, onChange, render = (v) => v, open }) 
 }
 
 export default function FilterPanel({
-  f, set, facets, gps, onLocate, originReady, total, onClear, onClose, openCount, withHours, all,
+  f, set, facets, gps, onLocate, originReady, total, onClear, open, onClose, openCount, withHours, all,
 }) {
+  const closeBtn = useRef(null);
+  // Opening the full-screen panel on the phone moves focus into it. The open class makes it visible
+  // with no delay, so the close button can take focus as soon as React has rendered.
+  useEffect(() => {
+    if (open) closeBtn.current?.focus();
+  }, [open]);
   const nearBairro = f.near.startsWith('b:') ? f.near.slice(2) : '';
   const prices = new Map(facets.prices);
   return (
-    <aside className="panel" aria-label="Filtros">
+    <aside
+      id="filtros" className="panel" aria-label="Filtros"
+      onKeyDown={(e) => { if (open && e.key === 'Escape') { e.stopPropagation(); onClose(); } }}
+    >
       <header className="panel-head">
         <h2>Filtros</h2>
-        {activeCount(f) > 0 && <button type="button" className="link" onClick={onClear}>Limpar</button>}
-        <button type="button" className="icon-btn panel-close" aria-label="Fechar filtros" onClick={onClose}><X size={18} /></button>
+        {activeCount(f) > 0 && <button type="button" className="link" onClick={onClear}>Limpar filtros</button>}
+        <button ref={closeBtn} type="button" className="icon-btn panel-close" aria-label="Fechar filtros" onClick={onClose}><X size={18} /></button>
       </header>
 
       <div className="panel-body">
@@ -59,7 +68,7 @@ export default function FilterPanel({
             Aberto agora <span className="chip-count">{openCount}</span>
           </Switch>
           {f.open && <p className="hint">Só entram lugares com horário cadastrado ({withHours} de {all}).</p>}
-          <Switch checked={f.fav} onChange={(fav) => set({ fav })}>Só favoritos</Switch>
+          <Switch checked={f.fav} onChange={(fav) => set({ fav })}>Favoritos</Switch>
         </section>
 
         <section className="facet-static">
@@ -71,13 +80,13 @@ export default function FilterPanel({
           </div>
           {f.near === 'me' && gps.state === 'loading' && <p className="hint">Pegando sua localização…</p>}
           {gps.msg && <p className="hint hint-warn" role="status">{gps.msg}</p>}
-          <label className="field-inline">
-            <span>ou a partir de</span>
+          <label className="field-stack">
+            <span>Perto de um bairro</span>
             <select
               value={nearBairro}
               onChange={(e) => set(e.target.value ? { near: `b:${e.target.value}` } : { near: '', radius: 0 })}
             >
-              <option value="">escolha um bairro</option>
+              <option value="">Escolha um bairro</option>
               {facets.origins.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>
           </label>
@@ -109,7 +118,7 @@ export default function FilterPanel({
         </section>
 
         <section className="facet-static">
-          <h3>Já fomos?</h3>
+          <h3>Situação</h3>
           <div className="chips">
             {STATUS.map((s) => (
               <Chip key={s.id} active={f.status === s.id} onClick={() => set({ status: s.id })}>{s.label}</Chip>

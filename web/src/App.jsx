@@ -66,7 +66,9 @@ function DrawOptions({ opts, onChange, vetoed, onClearVetoes, pool, total, onClo
   );
 }
 
-const byCountThenName =(a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0]), 'pt-BR');
+const openLabel = (n) => (n === 0 ? 'Nenhum lugar aberto agora' : n === 1 ? '1 lugar aberto agora' : `${n} lugares abertos agora`);
+
+const byCountThenName = (a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0]), 'pt-BR');
 const byName = (a, b) => String(a[0]).localeCompare(String(b[0]), 'pt-BR');
 const uniq = (values) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
@@ -167,7 +169,7 @@ function Row({ p, onOpen }) {
             </span>
           ))}
           {!rated && p.visited && <span className="flag">já fomos</span>}
-          {!rated && !p.visited && p.want && <span className="flag">quero ir</span>}
+          {!rated && !p.visited && p.want && <span className="flag">queremos ir</span>}
         </div>
       </button>
     </li>
@@ -193,6 +195,24 @@ export default function App() {
   const [vetoes, setVetoes] = useState(loadVetoes);
   const [drawDlg, setDrawDlg] = useState(false);
   const [online, setOnline] = useState(() => navigator.onLine);
+  const filtersBtn = useRef(null);
+  const panelWasOpen = useRef(false);
+
+  // On the phone the filter panel covers the whole screen: everything behind it is made inert, so
+  // Tab and screen reader swipes stay inside it, and closing it puts focus back on the Filtros button.
+  useEffect(() => {
+    const phone = window.matchMedia('(max-width: 899px)');
+    const apply = () => {
+      const on = panelOpen && phone.matches;
+      document.querySelectorAll('.skip, .ribbon, .masthead, .top, .offline, main, .tabbar, .fab')
+        .forEach((el) => { el.inert = on; });
+    };
+    apply();
+    if (panelWasOpen.current && !panelOpen) filtersBtn.current?.focus({ preventScroll: true });
+    panelWasOpen.current = panelOpen;
+    phone.addEventListener('change', apply);
+    return () => phone.removeEventListener('change', apply);
+  }, [panelOpen]);
 
   useEffect(() => {
     const tick = setInterval(() => setNow(nowSP()), 60_000);
@@ -447,9 +467,14 @@ export default function App() {
 
   return (
     <div className={`app ${panelOpen ? 'panel-open' : ''}`}>
-      <p className="ribbon">
-        {places ? `${withDist.filter((p) => p.openNow).length} lugares abertos agora` : '\u00a0'}
-      </p>
+      {/* A real link would add a history step and confuse the back-button handling above. */}
+      <a
+        className="skip" href="#conteudo"
+        onClick={(e) => { e.preventDefault(); document.getElementById('conteudo')?.focus(); }}
+      >
+        Pular os filtros
+      </a>
+      <p className="ribbon">{places ? openLabel(withDist.filter((p) => p.openNow).length) : '\u00a0'}</p>
       <div className="masthead">
         <a className="wordmark" href="/">Bora Comer</a>
       </div>
@@ -484,14 +509,17 @@ export default function App() {
       <div className="layout">
         <FilterPanel
           f={f} set={set} facets={facets} gps={gps} onLocate={locate} originReady={!!origin}
-          total={list.length} onClear={clear} onClose={() => setPanelOpen(false)}
+          total={list.length} onClear={clear} open={panelOpen} onClose={() => setPanelOpen(false)}
           openCount={openStats.open} withHours={openStats.known} all={withDist.length}
         />
 
-        <main>
+        <main id="conteudo" tabIndex={-1}>
           <div className="toolbar">
             <div className="quick" role="group" aria-label="Filtros rápidos">
-              <button type="button" className="chip filters-btn" onClick={() => setPanelOpen(true)}>
+              <button
+                ref={filtersBtn} type="button" className="chip filters-btn"
+                aria-expanded={panelOpen} aria-controls="filtros" onClick={() => setPanelOpen(true)}
+              >
                 <SlidersHorizontal size={15} aria-hidden="true" /> Filtros
                 {nActive > 0 && <span className="facet-n">{nActive}</span>}
               </button>
@@ -525,21 +553,24 @@ export default function App() {
             </div>
           </div>
 
-          <div className="summary">
-            <p className="count" role="status">
-              {places && <><strong>{list.length}</strong> {list.length === 1 ? 'lugar' : 'lugares'}</>}
-              {places && list.length !== places.length && <> de {places.length}</>}
-            </p>
-            {/* The history is always newest first, so the order picker would do nothing there. */}
-            {view !== 'historico' && (
-              <label className="sort">
-                <span className="sr-only">Ordenar por</span>
-                <select value={effectiveSort(f)} onChange={(e) => set({ sort: e.target.value })}>
-                  {SORTS.filter((s) => s.id !== 'dist' || f.near).map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-                </select>
-              </label>
-            )}
-          </div>
+          {/* The history counts visits, not places, so this count would compete with its own totals there. */}
+          {view !== 'historico' && (
+            <div className="summary">
+              <p className="count" role="status">
+                {places && <><strong>{list.length}</strong> {list.length === 1 ? 'lugar' : 'lugares'}</>}
+                {places && list.length !== places.length && <> de {places.length}</>}
+              </p>
+              {/* Only the list has an order; the map and the history would ignore it. */}
+              {view === 'lista' && (
+                <label className="sort">
+                  <span className="sr-only">Ordenar por</span>
+                  <select value={effectiveSort(f)} onChange={(e) => set({ sort: e.target.value })}>
+                    {SORTS.filter((s) => s.id !== 'dist' || f.near).map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                  </select>
+                </label>
+              )}
+            </div>
+          )}
 
           {f.near === 'me' && gps.msg && <p className="hint hint-warn" role="status">{gps.msg}</p>}
           {active.length > 0 && (
@@ -549,7 +580,7 @@ export default function App() {
                   {label} <X size={13} aria-hidden="true" />
                 </button>
               ))}
-              {nActive > 1 && <button type="button" className="link" onClick={clear}>Limpar tudo</button>}
+              {nActive > 1 && <button type="button" className="link" onClick={clear}>Limpar filtros</button>}
             </div>
           )}
 
