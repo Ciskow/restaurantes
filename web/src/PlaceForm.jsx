@@ -156,7 +156,10 @@ export default function PlaceForm({ place, auth, options, onSave, onDelete, onVi
 
   async function submit(e) {
     e.preventDefault();
-    if (!d.name.trim()) return setError('Dê um nome ao lugar.');
+    if (!d.name.trim()) {
+      document.getElementById('f-name')?.focus();
+      return setError('Dê um nome ao lugar.');
+    }
     let hours = [];
     if (d.hours) {
       hours = d.hours.map(normalizeDay);
@@ -205,6 +208,96 @@ export default function PlaceForm({ place, auth, options, onSave, onDelete, onVi
             </div>
             {linkMsg && <small role="status">{linkMsg}</small>}
           </div>
+
+          <div className="field">
+            <span>Fotos</span>
+            {d.photos.length > 0 && (
+              <ul className="thumbs">
+                {d.photos.map((src, i) => (
+                  <li key={src}>
+                    <img src={src} alt={`Foto ${i + 1}`} referrerPolicy="no-referrer" loading="lazy" />
+                    {i === 0
+                      ? <span className="thumb-cover">Capa</span>
+                      : (
+                        <button
+                          type="button" className="thumb-btn thumb-first" title="Usar como capa"
+                          aria-label={`Usar a foto ${i + 1} como capa`}
+                          onClick={() => set({ photos: [src, ...d.photos.filter((x) => x !== src)] })}
+                        >
+                          ★
+                        </button>
+                      )}
+                    <button
+                      type="button" className="thumb-btn thumb-x" aria-label={`Remover a foto ${i + 1}`}
+                      onClick={() => set({ photos: d.photos.filter((x) => x !== src) })}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <input
+              ref={fileInput} type="file" accept="image/*" multiple hidden
+              onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }}
+            />
+            <div className="input-row">
+              <button type="button" className="btn btn-small" disabled={working === 'photos'} onClick={() => fileInput.current.click()}>
+                {working === 'photos' ? 'Enviando…' : 'Enviar fotos'}
+              </button>
+              <input
+                aria-label="Link de uma foto" placeholder="ou cole o link de uma foto" value={photoUrl}
+                onChange={(e) => setPhotoUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPhotoUrl(); } }}
+              />
+              {photoUrl && <button type="button" className="btn btn-small" onClick={addPhotoUrl}>Adicionar</button>}
+            </div>
+            <small role="status">{photoMsg || 'Também dá para colar (Ctrl+V) ou arrastar uma imagem.'}</small>
+          </div>
+
+          <fieldset className="field form-ratings">
+            <legend>Nossa experiência</legend>
+            {PEOPLE.map((person) => (
+              <div key={person.id} className="rating-row">
+                <span className={`who who-${person.id}`}>{person.label}</span>
+                <Stars
+                  who={person.id} value={d[person.field]} label={`Nota de ${person.label}`}
+                  onChange={(n) => set({ [person.field]: n, ...(n ? { visited: true } : {}) })}
+                />
+              </div>
+            ))}
+            <div className="toggles">
+              <button
+                type="button" className="chip" aria-pressed={d.visited}
+                onClick={() => (d.visited && place?.visits?.length ? onVisitedLocked() : set({ visited: !d.visited }))}
+              >
+                Já fomos
+              </button>
+              <button type="button" className="chip" aria-pressed={d.want} onClick={() => set({ want: !d.want })}>Queremos ir</button>
+              <button type="button" className="chip" aria-pressed={d.favorite} onClick={() => set({ favorite: !d.favorite })}>Favorito</button>
+            </div>
+          </fieldset>
+
+          <label className="field">
+            <span>Prato pra pedir</span>
+            <input {...text('dish')} />
+          </label>
+
+          <label className="field">
+            <span>Observações</span>
+            <textarea {...text('notes')} rows={3} />
+          </label>
+
+          <div className="field">
+            <label htmlFor="f-kws">Palavras-chave</label>
+            <TagInput
+              id="f-kws" value={d.keywords} suggestions={options.kws}
+              onChange={(keywords) => set({ keywords })} placeholder="date, fila, pet friendly…"
+            />
+          </div>
+
+          {/* Below: what a pasted link usually fills in. */}
+          <h3 className="form-section">Dados do lugar</h3>
 
           <label className="field">
             <span>Nome</span>
@@ -301,24 +394,6 @@ export default function PlaceForm({ place, auth, options, onSave, onDelete, onVi
             )}
           </fieldset>
 
-          <label className="field">
-            <span>Prato pra pedir</span>
-            <input {...text('dish')} />
-          </label>
-
-          <label className="field">
-            <span>Observações</span>
-            <textarea {...text('notes')} rows={3} />
-          </label>
-
-          <div className="field">
-            <label htmlFor="f-kws">Palavras-chave</label>
-            <TagInput
-              id="f-kws" value={d.keywords} suggestions={options.kws}
-              onChange={(keywords) => set({ keywords })} placeholder="date, fila, pet friendly…"
-            />
-          </div>
-
           <div className="grid-2">
             <label className="field">
               <span>Instagram</span>
@@ -356,75 +431,6 @@ export default function PlaceForm({ place, auth, options, onSave, onDelete, onVi
               </button>
             </div>
           </div>
-
-          <div className="field">
-            <span>Fotos</span>
-            {d.photos.length > 0 && (
-              <ul className="thumbs">
-                {d.photos.map((src, i) => (
-                  <li key={src}>
-                    <img src={src} alt={`Foto ${i + 1}`} referrerPolicy="no-referrer" loading="lazy" />
-                    {i === 0
-                      ? <span className="thumb-cover">Capa</span>
-                      : (
-                        <button
-                          type="button" className="thumb-btn thumb-first" title="Usar como capa"
-                          aria-label={`Usar a foto ${i + 1} como capa`}
-                          onClick={() => set({ photos: [src, ...d.photos.filter((x) => x !== src)] })}
-                        >
-                          ★
-                        </button>
-                      )}
-                    <button
-                      type="button" className="thumb-btn thumb-x" aria-label={`Remover a foto ${i + 1}`}
-                      onClick={() => set({ photos: d.photos.filter((x) => x !== src) })}
-                    >
-                      ×
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <input
-              ref={fileInput} type="file" accept="image/*" multiple hidden
-              onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }}
-            />
-            <div className="input-row">
-              <button type="button" className="btn btn-small" disabled={working === 'photos'} onClick={() => fileInput.current.click()}>
-                {working === 'photos' ? 'Enviando…' : 'Enviar fotos'}
-              </button>
-              <input
-                aria-label="Link de uma foto" placeholder="ou cole o link de uma foto" value={photoUrl}
-                onChange={(e) => setPhotoUrl(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPhotoUrl(); } }}
-              />
-              {photoUrl && <button type="button" className="btn btn-small" onClick={addPhotoUrl}>Adicionar</button>}
-            </div>
-            <small role="status">{photoMsg || 'Também dá para colar (Ctrl+V) ou arrastar uma imagem.'}</small>
-          </div>
-
-          <fieldset className="field form-ratings">
-            <legend>Nossa experiência</legend>
-            {PEOPLE.map((person) => (
-              <div key={person.id} className="rating-row">
-                <span className={`who who-${person.id}`}>{person.label}</span>
-                <Stars
-                  who={person.id} value={d[person.field]} label={`Nota de ${person.label}`}
-                  onChange={(n) => set({ [person.field]: n, ...(n ? { visited: true } : {}) })}
-                />
-              </div>
-            ))}
-            <div className="toggles">
-              <button
-                type="button" className="chip" aria-pressed={d.visited}
-                onClick={() => (d.visited && place?.visits?.length ? onVisitedLocked() : set({ visited: !d.visited }))}
-              >
-                Já fomos
-              </button>
-              <button type="button" className="chip" aria-pressed={d.want} onClick={() => set({ want: !d.want })}>Queremos ir</button>
-              <button type="button" className="chip" aria-pressed={d.favorite} onClick={() => set({ favorite: !d.favorite })}>Favorito</button>
-            </div>
-          </fieldset>
         </div>
 
         <footer className="form-foot">
