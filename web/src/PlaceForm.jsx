@@ -209,6 +209,11 @@ export default function PlaceForm({ place, auth, options, onSave, onDelete, onVi
             {linkMsg && <small role="status">{linkMsg}</small>}
           </div>
 
+          <label className="field">
+            <span>Nome</span>
+            <input {...text('name')} required />
+          </label>
+
           <div className="field">
             <span>Fotos</span>
             {d.photos.length > 0 && (
@@ -299,11 +304,6 @@ export default function PlaceForm({ place, auth, options, onSave, onDelete, onVi
 
           {/* Below: what a pasted link usually fills in. */}
           <h3 className="form-section">Dados do lugar</h3>
-
-          <label className="field">
-            <span>Nome</span>
-            <input {...text('name')} required />
-          </label>
 
           <div className="field">
             <label htmlFor="f-cats">Tipo de comida</label>
