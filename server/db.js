@@ -199,13 +199,20 @@ export function setMeta(key, value) {
     .run(key, value);
 }
 
-/** One snapshot per day in data/backups, keeping the last 14. */
+/** The daily snapshots' names, e.g. restaurantes-2026-11-19.db. */
+const DAILY = /^restaurantes-\d{4}-\d{2}-\d{2}\.db$/;
+const KEEP_DAILY = 14;
+
+/**
+ * One snapshot per day in data/backups, keeping the last 14 days. Only the daily files are pruned:
+ * copies saved by hand under other names (before a bulk change, say) are never counted or deleted.
+ */
 export function backup() {
   const dir = path.join(DATA_DIR, 'backups');
   fs.mkdirSync(dir, { recursive: true });
   const target = path.join(dir, `restaurantes-${new Date().toISOString().slice(0, 10)}.db`);
   if (fs.existsSync(target)) return;
   db.exec(`VACUUM INTO '${target.replace(/'/g, "''")}'`);
-  const old = fs.readdirSync(dir).filter((f) => f.endsWith('.db')).sort().slice(0, -14);
+  const old = fs.readdirSync(dir).filter((f) => DAILY.test(f)).sort().slice(0, -KEEP_DAILY);
   for (const f of old) fs.rmSync(path.join(dir, f));
 }
