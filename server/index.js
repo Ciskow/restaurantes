@@ -177,6 +177,28 @@ app.post('/api/login', (req, res) => {
 
 app.get('/api/session', requireEdit, (req, res) => res.json({ ok: true }));
 
+// ---- per-person preferences (for now only the theme), kept in the meta table as prefs:<person> ----
+const PERSONS = new Set(['ciskow', 'andkiwii']);
+const THEMES = new Set(['tomo', 'tomo-escuro']);
+const readPrefs = (who) => {
+  try { return JSON.parse(getMeta(`prefs:${who}`) || '{}'); } catch { return {}; }
+};
+
+app.get('/api/prefs/:who', (req, res) => {
+  if (!PERSONS.has(req.params.who)) return res.status(404).json({ error: 'Pessoa desconhecida.' });
+  res.json(readPrefs(req.params.who));
+});
+
+app.put('/api/prefs/:who', requireEdit, (req, res) => {
+  const { who } = req.params;
+  if (!PERSONS.has(who)) return res.status(404).json({ error: 'Pessoa desconhecida.' });
+  const theme = str(req.body?.theme, 40);
+  if (!THEMES.has(theme)) return res.status(400).json({ error: 'Tema desconhecido.' });
+  const prefs = { ...readPrefs(who), theme };
+  setMeta(`prefs:${who}`, JSON.stringify(prefs));
+  res.json(prefs);
+});
+
 app.post('/api/places', requireEdit, (req, res) => {
   const data = clean(req.body);
   if (!data.name) return res.status(400).json({ error: 'O nome é obrigatório.' });

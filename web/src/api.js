@@ -46,6 +46,8 @@ export const api = {
   addVisit: (id, visit, token) => req('POST', `/api/places/${id}/visits`, visit, token),
   updateVisit: (id, visitId, visit, token) => req('PUT', `/api/places/${id}/visits/${visitId}`, visit, token),
   removeVisit: (id, visitId, token) => req('DELETE', `/api/places/${id}/visits/${visitId}`, undefined, token),
+  prefs: (who) => req('GET', `/api/prefs/${who}`),
+  savePrefs: (who, prefs, token) => req('PUT', `/api/prefs/${who}`, prefs, token),
   geocode: (q, token) => req('POST', '/api/geocode', { q }, token),
   importLink: (url, token) => req('POST', '/api/import-link', { url }, token),
   async upload(blob, token) {

@@ -2,8 +2,9 @@ import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useStat
 import { PEOPLE, api, loadAuth, saveAuth } from './api.js';
 import { REST_DAYS, drawPool, loadDrawOpts, loadVetoes, pick, saveDrawOpts, saveVetoes } from './draw.js';
 import {
-  Heart, History as HistoryIcon, List, Map as MapIcon, Plus, Search, Settings, SlidersHorizontal, Star, X,
+  Check, Heart, History as HistoryIcon, List, Map as MapIcon, Plus, Search, Settings, SlidersHorizontal, Star, X,
 } from 'lucide-react';
+import { THEMES, applyTheme, isTheme, loadDeviceTheme, loadTheme, saveDeviceTheme } from './theme.js';
 import { nowSP, openStatus } from './hours.js';
 import {
   EMPTY, SORTS, STATUS, WHO, activeCount, avgRating, effectiveSort, facetCounts, formatKm, fromQuery, km,
@@ -72,12 +73,13 @@ const byCountThenName = (a, b) => b[1] - a[1] || String(a[0]).localeCompare(Stri
 const byName = (a, b) => String(a[0]).localeCompare(String(b[0]), 'pt-BR');
 const uniq = (values) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
-function Account({ auth, preset, onDone, onLogout, onClose }) {
+function Account({ auth, preset, theme, onTheme, showTheme, onDone, onLogout, onClose }) {
   const [pin, setPin] = useState('');
   const [who, setWho] = useState(auth.who || preset || '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const radios = useRef({});
+  const themeRadios = useRef({});
 
   // The two names are one choice: a radio group, where the arrow keys move and select.
   const step = (dir) => {
@@ -135,6 +137,41 @@ function Account({ auth, preset, onDone, onLogout, onClose }) {
           </label>
         )}
         {error && <p className="error" role="alert">{error}</p>}
+        {/* Not when the dialog only asks for the PIN before an edit. Applies at once, no need to confirm. */}
+        {showTheme && (
+          <div className="account-theme">
+          <fieldset className="field">
+            <legend>Tema</legend>
+            {/* One choice, applied the moment it is picked: a radio group with a checkmark on the current theme. */}
+            <div className="theme-options" role="radiogroup" aria-label="Tema">
+              {THEMES.map((t, i) => (
+                <button
+                  key={t.id} ref={(el) => { themeRadios.current[t.id] = el; }}
+                  type="button" role="radio" aria-checked={theme === t.id} className="theme-option"
+                  tabIndex={theme === t.id || (!isTheme(theme) && i === 0) ? 0 : -1}
+                  onClick={() => onTheme(t.id)}
+                  onKeyDown={(e) => {
+                    const dir = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+                    if (!dir) return;
+                    e.preventDefault();
+                    const next = THEMES[(i + dir + THEMES.length) % THEMES.length];
+                    onTheme(next.id);
+                    themeRadios.current[next.id]?.focus();
+                  }}
+                >
+                  <Check size={18} aria-hidden="true" />
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <small>
+              {auth.token
+                ? `Salvo para ${PEOPLE.find((p) => p.id === auth.who)?.label || 'quem entrou'}.`
+                : 'Sem entrar, o tema fica só neste aparelho.'}
+            </small>
+          </fieldset>
+          </div>
+        )}
         <div className="account-actions">
           {auth.token && <button type="button" className="btn" onClick={onLogout}>Sair</button>}
           <button type="button" className="btn" onClick={onClose}>Cancelar</button>
@@ -210,6 +247,38 @@ export default function App() {
   const [openId, setOpenId] = useState(() => Number(new URLSearchParams(window.location.search).get('p')) || null);
   const [gps, setGps] = useState({ state: 'idle', pos: null, msg: '' });
   const [auth, setAuth] = useState(loadAuth);
+  const [theme, setTheme] = useState(loadTheme);
+
+  // Themes:
+  // - nobody signed in: this device's own theme (Tomo unless changed here), saved on the device only;
+  // - signing in, or switching to the other person: their saved theme is loaded; if they have none yet,
+  //   the theme on screen is saved as theirs;
+  // - changing the theme while signed in saves it for that person;
+  // - signing out brings back this device's own theme.
+  const themeNow = useRef(theme);
+  themeNow.current = theme;
+  const saveFor = (who, token, id) => api.savePrefs(who, { theme: id }, token).catch(() => {
+    notify(`Não consegui salvar o tema de ${PEOPLE.find((p) => p.id === who)?.label}. Ele vale só neste aparelho por enquanto.`);
+  });
+  useEffect(() => {
+    if (!auth.who) return;
+    let live = true;
+    api.prefs(auth.who)
+      .then((p) => {
+        if (!live) return;
+        if (isTheme(p.theme)) setTheme(applyTheme(p.theme));
+        else if (auth.token) saveFor(auth.who, auth.token, themeNow.current);
+      })
+      .catch(() => { /* offline or server away: keep the theme on screen */ });
+    return () => { live = false; };
+  }, [auth.who]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Picking a theme applies it at once; no confirmation needed.
+  const chooseTheme = (id) => {
+    setTheme(applyTheme(id));
+    if (auth.token && auth.who) saveFor(auth.who, auth.token, id);
+    else saveDeviceTheme(id);
+  };
   const [account, setAccount] = useState(null); // { then?, preset? }
   const [form, setForm] = useState(null); // { place } | { place: null }
   const [drawn, setDrawn] = useState(null);
@@ -681,8 +750,15 @@ export default function App() {
         <Account
           auth={auth}
           preset={account.preset}
+          theme={theme} onTheme={chooseTheme} showTheme={!account.then}
           onClose={() => { account.onCancel?.(); setAccount(null); }}
-          onLogout={() => { const a = { token: '', who: '' }; saveAuth(a); setAuth(a); setAccount(null); }}
+          onLogout={() => {
+            const a = { token: '', who: '' };
+            saveAuth(a);
+            setAuth(a);
+            setAccount(null);
+            setTheme(applyTheme(loadDeviceTheme()));
+          }}
           onDone={(a) => {
             saveAuth(a);
             setAuth(a);
