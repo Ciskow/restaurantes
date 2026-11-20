@@ -1,9 +1,12 @@
 // Themes. The choice is kept on the device (so it applies before anyone signs in) and, for whoever
 // is signed in, on the server, so it follows that person to their other devices.
 
+// bar: the phone's status bar colour, matched to the strip at the top of the page.
 export const THEMES = [
-  { id: 'tomo', label: 'Tomo' },
-  { id: 'tomo-escuro', label: 'Tomo escuro' },
+  { id: 'tomo', label: 'Tomo', bar: '#ff6347' },
+  { id: 'tomo-escuro', label: 'Tomo escuro', bar: '#ff6347' },
+  { id: 'cinema', label: 'Cinema', bar: '#202830' },
+  { id: 'classico', label: 'Clássico', bar: '#0f1113' },
 ];
 export const DEFAULT_THEME = 'tomo';
 const KEY = 'bora-comer-tema'; // also read by the inline script in index.html, before the page draws
@@ -23,6 +26,7 @@ export function applyTheme(id) {
   const theme = known(id) ? id : DEFAULT_THEME;
   if (theme === DEFAULT_THEME) delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = theme;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEMES.find((t) => t.id === theme).bar);
   try { localStorage.setItem(KEY, theme); } catch { /* storage unavailable */ }
   return theme;
 }

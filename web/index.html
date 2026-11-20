@@ -17,6 +17,8 @@
       try {
         var t = localStorage.getItem('bora-comer-tema');
         if (t && t !== 'tomo') document.documentElement.dataset.theme = t;
+        var bar = { cinema: '#202830', classico: '#0f1113' }[t];
+        if (bar) document.querySelector('meta[name="theme-color"]').setAttribute('content', bar);
       } catch (e) {}
     </script>
   </head>

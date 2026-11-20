@@ -179,7 +179,7 @@ app.get('/api/session', requireEdit, (req, res) => res.json({ ok: true }));
 
 // ---- per-person preferences (for now only the theme), kept in the meta table as prefs:<person> ----
 const PERSONS = new Set(['ciskow', 'andkiwii']);
-const THEMES = new Set(['tomo', 'tomo-escuro']);
+const THEMES = new Set(['tomo', 'tomo-escuro', 'cinema', 'classico']);
 const readPrefs = (who) => {
   try { return JSON.parse(getMeta(`prefs:${who}`) || '{}'); } catch { return {}; }
 };
