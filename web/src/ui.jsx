@@ -12,7 +12,7 @@ export function Switch({ checked, onChange, children }) {
 }
 
 /** Native <dialog>: gives focus trapping, Esc to close and a backdrop for free. */
-export function Modal({ onClose, className = '', label, children }) {
+export function Modal({ onClose, className = '', label, describedBy, children }) {
   const ref = useRef(null);
   useEffect(() => {
     const el = ref.current;
@@ -25,6 +25,7 @@ export function Modal({ onClose, className = '', label, children }) {
       ref={ref}
       className={`modal ${className}`}
       aria-label={label}
+      aria-describedby={describedBy}
       onCancel={(e) => { e.preventDefault(); onClose(); }}
       onMouseDown={(e) => { if (e.target === ref.current) onClose(); }}
     >
@@ -42,11 +43,15 @@ export function Chip({ active, onClick, children, count, title }) {
   );
 }
 
-export function Price({ value }) {
+/** "$$$" out of five. Screen readers get words instead of a row of dollar signs. With scale={false}, just the "$$$". */
+export function Price({ value, scale = true }) {
   if (!value) return null;
   return (
-    <span className="price" aria-label={`Preço ${value} de 5`}>
-      {'$'.repeat(value)}<span className="price-off">{'$'.repeat(5 - value)}</span>
+    <span className={scale ? 'price' : undefined}>
+      <span aria-hidden="true">
+        {'$'.repeat(value)}{scale && <span className="price-off">{'$'.repeat(5 - value)}</span>}
+      </span>
+      <span className="sr-only">preço {value} de 5</span>
     </span>
   );
 }
@@ -55,6 +60,7 @@ const STAR = 'M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5L2.6
 
 /** Five stars. With onChange it is editable; tapping the current value clears it. */
 export function Stars({ value, onChange, who, size = 22, label }) {
+  const spoken = value != null ? `${value.toLocaleString('pt-BR')} de 5 estrelas` : 'sem nota';
   const stars = [1, 2, 3, 4, 5].map((n) => {
     const on = value != null && n <= Math.round(value);
     const svg = (
@@ -80,7 +86,8 @@ export function Stars({ value, onChange, who, size = 22, label }) {
     <span
       className={`stars stars-${who || 'plain'}`}
       role={onChange ? 'group' : 'img'}
-      aria-label={label || (value != null ? `${value} de 5 estrelas` : 'Sem nota')}
+      // Read-only stars are one image, so its name has to carry the value too.
+      aria-label={onChange ? label || spoken : label ? `${label}: ${spoken}` : spoken}
     >
       {stars}
     </span>

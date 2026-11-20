@@ -147,13 +147,13 @@ export default function PlaceDetail({
   const maps = mapLinks(p);
   const where = [p.bairro, p.region, p.city].filter(Boolean).join(' · ');
   return (
-    <Modal onClose={onClose} className="detail" label={p.name}>
+    <Modal onClose={onClose} className="detail" label={p.name} describedBy={drawn ? 'drawn-note' : undefined}>
       <div className="detail-top">
         <button type="button" className="icon-btn" aria-label="Voltar" onClick={onClose}><ArrowLeft size={18} /></button>
         <span className="detail-top-right">
           <button
             type="button" className={`icon-btn ${p.favorite ? 'is-fav' : ''}`} aria-pressed={p.favorite}
-            aria-label={p.favorite ? 'Tirar dos favoritos' : 'Marcar como favorito'} title="Favorito"
+            aria-label="Favorito" title="Favorito"
             onClick={() => onPatch(p.id, { favorite: !p.favorite })}
           >
             <Heart size={18} fill={p.favorite ? 'currentColor' : 'none'} />
@@ -176,7 +176,7 @@ export default function PlaceDetail({
 
       {drawn && (
         <div className="drawn">
-          <span>Sorteado entre {drawn.count} {drawn.count === 1 ? 'lugar' : 'lugares'}</span>
+          <span id="drawn-note">Sorteado entre {drawn.count} {drawn.count === 1 ? 'lugar' : 'lugares'}</span>
           <span className="drawn-actions">
             {drawn.count > 1 && (
               <>

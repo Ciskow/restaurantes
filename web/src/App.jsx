@@ -13,7 +13,7 @@ import FilterPanel from './FilterPanel.jsx';
 import History from './History.jsx';
 import PlaceDetail, { VISITED_LOCKED } from './PlaceDetail.jsx';
 import PlaceForm from './PlaceForm.jsx';
-import { Chip, Modal, Photo } from './ui.jsx';
+import { Chip, Modal, Photo, Price } from './ui.jsx';
 
 // The map library is only downloaded when the map is first opened.
 const MapView = lazy(() => import('./MapView.jsx'));
@@ -77,6 +77,15 @@ function Account({ auth, preset, onDone, onLogout, onClose }) {
   const [who, setWho] = useState(auth.who || preset || '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const radios = useRef({});
+
+  // The two names are one choice: a radio group, where the arrow keys move and select.
+  const step = (dir) => {
+    const i = Math.max(0, PEOPLE.findIndex((p) => p.id === who));
+    const next = PEOPLE[(i + dir + PEOPLE.length) % PEOPLE.length];
+    setWho(next.id);
+    radios.current[next.id]?.focus();
+  };
 
   async function submit(e) {
     e.preventDefault();
@@ -98,9 +107,20 @@ function Account({ auth, preset, onDone, onLogout, onClose }) {
       <form onSubmit={submit}>
         <h2>{auth.token ? 'Quem está usando?' : 'Entrar para editar'}</h2>
         {!auth.token && <p className="hint">Dar nota, adicionar e editar lugares pede o PIN uma vez neste aparelho.</p>}
-        <div className="chips" role="group" aria-label="Quem está usando">
-          {PEOPLE.map((p) => (
-            <button key={p.id} type="button" className={`chip chip-who who-${p.id}`} aria-pressed={who === p.id} onClick={() => setWho(p.id)}>
+        <div className="chips" role="radiogroup" aria-label="Quem está usando">
+          {PEOPLE.map((p, i) => (
+            <button
+              key={p.id} ref={(el) => { radios.current[p.id] = el; }}
+              type="button" role="radio" aria-checked={who === p.id} className={`chip chip-who who-${p.id}`}
+              tabIndex={(who ? who === p.id : i === 0) ? 0 : -1}
+              // With nobody chosen yet, the choice comes first; otherwise straight to the PIN.
+              data-autofocus={!who && i === 0 ? '' : undefined}
+              onClick={() => setWho(p.id)}
+              onKeyDown={(e) => {
+                const dir = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+                if (dir) { e.preventDefault(); step(dir); }
+              }}
+            >
               {p.label}
             </button>
           ))}
@@ -109,7 +129,7 @@ function Account({ auth, preset, onDone, onLogout, onClose }) {
           <label className="field">
             <span>PIN</span>
             <input
-              type="password" inputMode="numeric" autoComplete="current-password" data-autofocus
+              type="password" inputMode="numeric" autoComplete="current-password" data-autofocus={who ? '' : undefined}
               value={pin} onChange={(e) => setPin(e.target.value)}
             />
           </label>
@@ -136,42 +156,49 @@ function Toast({ msg }) {
   return <div ref={ref} popover="manual" className="toast" role="status">{msg}</div>;
 }
 
-/** One place in the list: photo, name, what and where, open/distance, and the two ratings. */
+/**
+ * One place in the list: photo, name, what and where, open/distance, and the two ratings.
+ * The name is a heading holding the button, so screen readers can jump from place to place;
+ * the button's ::after stretches over the whole row, so a tap anywhere still opens it.
+ */
 function Row({ p, onOpen }) {
   const rated = avgRating(p) != null;
   const visits = p.visits?.length || 0;
-  const meta = [p.categories.slice(0, 2).join(', '), p.bairro || p.city, p.price ? '$'.repeat(p.price) : '']
-    .filter(Boolean).join(' · ');
+  const meta = [p.categories.slice(0, 2).join(', '), p.bairro || p.city].filter(Boolean).join(' · ');
   return (
-    <li>
-      <button type="button" className="row" onClick={() => onOpen(p.id)}>
-        <div className="row-photo"><Photo src={p.photos[0]} /></div>
-        <div className="row-main">
-          <h3>
-            {p.name}
-            {p.favorite && <Heart className="fav-mark" size={13} fill="currentColor" aria-label="Favorito" />}
-          </h3>
-          <p className="row-meta">{meta || 'Sem categoria'}</p>
-          {(p.status || p.dist != null || visits > 1) && (
-            <p className="row-status">
-              {p.status && <span className={p.status.open ? 'open-yes' : 'open-no'}>{p.status.text}</span>}
-              {p.dist != null && <span>{p.geo_approx ? '≈ ' : ''}{formatKm(p.dist)}</span>}
-              {visits > 1 && <span>{visits} visitas</span>}
-            </p>
-          )}
-        </div>
-        <div className="row-side">
-          {rated && PEOPLE.map((person) => p[person.field] != null && (
-            <span key={person.id} className={`score who-${person.id}`} title={`Nota de ${person.label}`}>
-              <span className="sr-only">{person.label}: </span>
-              <span className="score-who" aria-hidden="true">{person.label[0]}</span>
-              {p[person.field].toLocaleString('pt-BR')} <Star size={12} fill="currentColor" aria-hidden="true" />
-            </span>
-          ))}
-          {!rated && p.visited && <span className="flag">já fomos</span>}
-          {!rated && !p.visited && p.want && <span className="flag">queremos ir</span>}
-        </div>
-      </button>
+    <li className="row">
+      <div className="row-photo"><Photo src={p.photos[0]} /></div>
+      <div className="row-main">
+        <h3>
+          <button type="button" className="row-open" onClick={() => onOpen(p.id)}>{p.name}</button>
+          {p.favorite && <Heart className="fav-mark" size={13} fill="currentColor" role="img" aria-label="Favorito" />}
+        </h3>
+        <p className="row-meta">
+          {meta}
+          {meta && p.price ? ' · ' : ''}
+          <Price value={p.price} scale={false} />
+          {!meta && !p.price && 'Sem categoria'}
+        </p>
+        {(p.status || p.dist != null || visits > 1) && (
+          <p className="row-status">
+            {p.status && <span className={p.status.open ? 'open-yes' : 'open-no'}>{p.status.text}</span>}
+            {p.dist != null && <span>{p.geo_approx ? '≈ ' : ''}{formatKm(p.dist)}</span>}
+            {visits > 1 && <span>{visits} visitas</span>}
+          </p>
+        )}
+      </div>
+      <div className="row-side">
+        {rated && PEOPLE.map((person) => p[person.field] != null && (
+          <span key={person.id} className={`score who-${person.id}`} title={`Nota de ${person.label}`}>
+            <span className="sr-only">Nota de {person.label}: </span>
+            <span className="score-who" aria-hidden="true">{person.label[0]}</span>
+            {p[person.field].toLocaleString('pt-BR')}
+            <span className="sr-only"> de 5</span> <Star size={12} fill="currentColor" aria-hidden="true" />
+          </span>
+        ))}
+        {!rated && p.visited && <span className="flag">já fomos</span>}
+        {!rated && !p.visited && p.want && <span className="flag">queremos ir</span>}
+      </div>
     </li>
   );
 }
@@ -449,7 +476,7 @@ export default function App() {
   // Removable summary of what is filtering the list right now.
   const active = [
     ...f.cats.map((v) => [v, () => set({ cats: f.cats.filter((x) => x !== v) })]),
-    ...f.prices.map((v) => ['$'.repeat(v), () => set({ prices: f.prices.filter((x) => x !== v) })]),
+    ...f.prices.map((v) => ['$'.repeat(v), () => set({ prices: f.prices.filter((x) => x !== v) }), `preço ${v} de 5`]),
     ...f.cities.map((v) => [v, () => set({ cities: f.cities.filter((x) => x !== v) })]),
     ...f.regions.map((v) => [v, () => set({ regions: f.regions.filter((x) => x !== v) })]),
     ...f.bairros.map((v) => [v, () => set({ bairros: f.bairros.filter((x) => x !== v) })]),
@@ -575,8 +602,8 @@ export default function App() {
           {f.near === 'me' && gps.msg && <p className="hint hint-warn" role="status">{gps.msg}</p>}
           {active.length > 0 && (
             <div className="actives">
-              {active.map(([label, off]) => (
-                <button key={label} type="button" className="active-chip" onClick={off} aria-label={`Remover filtro ${label}`}>
+              {active.map(([label, off, spoken]) => (
+                <button key={label} type="button" className="active-chip" onClick={off} aria-label={`Remover filtro ${spoken || label}`}>
                   {label} <X size={13} aria-hidden="true" />
                 </button>
               ))}

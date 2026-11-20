@@ -107,7 +107,7 @@ export default function FilterPanel({
           <div className="seg seg-fill" role="group" aria-label="Preço">
             {[1, 2, 3, 4, 5].map((n) => (
               <button
-                key={n} type="button" aria-pressed={f.prices.includes(n)}
+                key={n} type="button" aria-pressed={f.prices.includes(n)} aria-label={`${n} de 5`}
                 title={`${prices.get(n) || 0} ${prices.get(n) === 1 ? 'lugar' : 'lugares'}`}
                 onClick={() => set({ prices: toggle(f.prices, n) })}
               >

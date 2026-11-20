@@ -319,7 +319,7 @@ export default function PlaceForm({ place, auth, options, onSave, onDelete, onVi
             <div className="chips" role="group" aria-labelledby="f-price">
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
-                  key={n} type="button" className="chip" aria-pressed={d.price === n}
+                  key={n} type="button" className="chip" aria-pressed={d.price === n} aria-label={`${n} de 5`}
                   onClick={() => set({ price: d.price === n ? null : n })}
                 >
                   {'$'.repeat(n)}
