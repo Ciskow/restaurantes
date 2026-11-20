@@ -66,7 +66,7 @@ function Visits({ place: p, onVisit }) {
   return (
     <section className="section visits" aria-labelledby="visits-title">
       <div className="section-head">
-        <h3 id="visits-title">Visitas{visits.length > 0 && <span className="section-n"> · {visits.length}</span>}</h3>
+        <h3 id="visits-title">Visitas{visits.length > 0 && <span className="section-n"> ({visits.length})</span>}</h3>
         {editing !== 'new' && (
           <button type="button" className="btn btn-small" onClick={() => setEditing('new')}>
             Registrar visita

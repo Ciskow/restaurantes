@@ -63,7 +63,7 @@ main:focus-visible { outline: none; } /* only a landing spot for the skip link *
 .btn-small.btn-icon { width: 36px; }
 .btn-danger { color: var(--danger); border-color: var(--danger); margin-right: auto; }
 .link { background: none; border: 0; padding: 4px 0; color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
-.link:hover { color: var(--red-ink); }
+.link:hover { text-decoration-thickness: 2px; }
 .icon-btn {
   display: inline-grid; place-items: center; width: 38px; height: 38px; flex: none;
   border: 1px solid var(--line); border-radius: 0; background: var(--surface); color: var(--ink); line-height: 1;
@@ -178,7 +178,6 @@ main { padding: 16px 24px 64px; min-width: 0; }
   background: var(--ink); color: var(--on-ink);
   font: 600 0.75rem/1 var(--body);
 }
-.chip[aria-pressed='true'] .facet-n, .filters-btn .facet-n { background: var(--red); color: var(--ink); }
 .field-inline { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
 .field-inline span { flex: none; color: var(--muted); }
 .field-stack { display: grid; gap: 6px; font-size: 0.9rem; }
@@ -190,7 +189,7 @@ main { padding: 16px 24px 64px; min-width: 0; }
 .draw-group { display: flex; }
 /* A linen cut between the two black halves, so they read as two buttons. */
 .draw-more { position: relative; padding: 0 12px; border-left: 1px solid var(--bg); }
-.dot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; background: var(--red); }
+.dot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; background: var(--on-ink); }
 .summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 24px 0 8px; min-height: 34px; }
 .count { margin-right: auto; color: var(--muted); font: 1rem/1 var(--fine); }
 .count strong { font: 400 2.2rem/1 var(--display); color: var(--ink); margin-right: 4px; }
