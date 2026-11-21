@@ -581,8 +581,7 @@ export default function App() {
           <span className="sr-only">Buscar</span>
           <Search size={16} aria-hidden="true" />
           <input
-            type="search" placeholder="Buscar lugares" value={f.q}
-            title="Use | para um ou outro (pizza|sushi) e + para exigir os dois (bar+pinheiros)"
+            type="search" placeholder="Buscar lugares" value={f.q} aria-describedby="search-hint"
             onChange={(e) => set({ q: e.target.value })}
           />
         </label>
@@ -600,6 +599,10 @@ export default function App() {
           {whoLabel || 'Entrar'}
         </button>
       </header>
+      {/* Outside the sticky bar, whose height the filter column depends on; it scrolls away with the page. */}
+      <p className="search-hint" id="search-hint">
+<code>pizza|sushi</code>: um ou outro · <code>pizza+sushi</code>: os dois
+      </p>
 
       {!online && (
         <p className="offline" role="status">Sem conexão: mostrando a lista salva neste aparelho. Edições ficam indisponíveis.</p>
