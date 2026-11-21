@@ -48,6 +48,10 @@ export const api = {
   removeVisit: (id, visitId, token) => req('DELETE', `/api/places/${id}/visits/${visitId}`, undefined, token),
   prefs: (who) => req('GET', `/api/prefs/${who}`),
   savePrefs: (who, prefs, token) => req('PUT', `/api/prefs/${who}`, prefs, token),
+  pois: (token) => req('GET', '/api/pois', undefined, token),
+  addPoi: (poi, token) => req('POST', '/api/pois', poi, token),
+  updatePoi: (id, poi, token) => req('PUT', `/api/pois/${id}`, poi, token),
+  removePoi: (id, token) => req('DELETE', `/api/pois/${id}`, undefined, token),
   geocode: (q, token) => req('POST', '/api/geocode', { q }, token),
   importLink: (url, token) => req('POST', '/api/import-link', { url }, token),
   async upload(blob, token) {

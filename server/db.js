@@ -190,6 +190,39 @@ export function deletePlace(id) {
   return db.prepare('DELETE FROM places WHERE id = ?').run(id).changes > 0;
 }
 
+// ---- points of interest: our own landmarks on the map (homes, malls...), never listed as places ----
+db.exec(`
+  CREATE TABLE IF NOT EXISTS pois (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    lat REAL NOT NULL,
+    lng REAL NOT NULL,
+    icon TEXT NOT NULL DEFAULT 'outro',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+`);
+
+const POI_SQL = 'SELECT id, name, lat, lng, icon FROM pois';
+
+export const listPois = () => db.prepare(`${POI_SQL} ORDER BY name COLLATE NOCASE`).all();
+export const getPoi = (id) => db.prepare(`${POI_SQL} WHERE id = ?`).get(id) || null;
+
+export function insertPoi({ name, lat, lng, icon }) {
+  const now = new Date().toISOString();
+  const info = db.prepare('INSERT INTO pois (name, lat, lng, icon, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(name, lat, lng, icon, now, now);
+  return getPoi(Number(info.lastInsertRowid));
+}
+
+export function updatePoi(id, { name, lat, lng, icon }) {
+  db.prepare('UPDATE pois SET name = ?, lat = ?, lng = ?, icon = ?, updated_at = ? WHERE id = ?')
+    .run(name, lat, lng, icon, new Date().toISOString(), id);
+  return getPoi(id);
+}
+
+export const deletePoi = (id) => db.prepare('DELETE FROM pois WHERE id = ?').run(id).changes > 0;
+
 export function getMeta(key) {
   return db.prepare('SELECT value FROM meta WHERE key = ?').get(key)?.value ?? null;
 }

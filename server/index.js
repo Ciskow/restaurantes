@@ -8,8 +8,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 try { process.loadEnvFile(path.join(ROOT, '.env')); } catch { /* no .env: rely on real env vars */ }
 
 const {
-  DATA_DIR, addVisit, backup, deletePlace, deleteVisit, ensureVisit, getMeta, getPlace, getVisit, insertPlace, listPlaces,
-  setMeta, updatePlace, updateVisit,
+  DATA_DIR, addVisit, backup, deletePlace, deletePoi, deleteVisit, ensureVisit, getMeta, getPlace, getPoi, getVisit,
+  insertPlace, insertPoi, listPlaces, listPois, setMeta, updatePlace, updatePoi, updateVisit,
 } = await import('./db.js');
 const { geocode, cleanAddress } = await import('./geocode.js');
 const { importLink } = await import('./link.js');
@@ -243,6 +243,39 @@ app.delete('/api/places/:id/visits/:visitId', requireEdit, (req, res) => {
 
 app.delete('/api/places/:id', requireEdit, (req, res) => {
   if (!deletePlace(Number(req.params.id))) return res.status(404).json({ error: 'Lugar não encontrado.' });
+  res.json({ ok: true });
+});
+
+// ---- points of interest. Some are our homes, so unlike the places they are only sent with the PIN. ----
+const POI_ICONS = new Set(['casa', 'familia', 'shopping', 'trabalho', 'estudo', 'academia', 'parque', 'estacao', 'outro']);
+function cleanPoi(body) {
+  const name = str(body?.name, 60);
+  const lat = num(body?.lat, -90, 90);
+  const lng = num(body?.lng, -180, 180);
+  if (!name) return { error: 'Dê um nome ao ponto.' };
+  if (lat === null || lng === null) return { error: 'Escolha onde fica o ponto.' };
+  const icon = POI_ICONS.has(body?.icon) ? body.icon : 'outro';
+  return { name, lat, lng, icon };
+}
+
+app.get('/api/pois', requireEdit, (req, res) => res.json(listPois()));
+
+app.post('/api/pois', requireEdit, (req, res) => {
+  const poi = cleanPoi(req.body);
+  if (poi.error) return res.status(400).json({ error: poi.error });
+  res.status(201).json(insertPoi(poi));
+});
+
+app.put('/api/pois/:id', requireEdit, (req, res) => {
+  const id = Number(req.params.id);
+  if (!getPoi(id)) return res.status(404).json({ error: 'Ponto não encontrado.' });
+  const poi = cleanPoi(req.body);
+  if (poi.error) return res.status(400).json({ error: poi.error });
+  res.json(updatePoi(id, poi));
+});
+
+app.delete('/api/pois/:id', requireEdit, (req, res) => {
+  if (!deletePoi(Number(req.params.id))) return res.status(404).json({ error: 'Ponto não encontrado.' });
   res.json({ ok: true });
 });
 

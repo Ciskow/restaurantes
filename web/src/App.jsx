@@ -14,6 +14,7 @@ import FilterPanel from './FilterPanel.jsx';
 import History from './History.jsx';
 import PlaceDetail, { VISITED_LOCKED } from './PlaceDetail.jsx';
 import PlaceForm from './PlaceForm.jsx';
+import Pois from './Pois.jsx';
 import { Chip, Modal, Photo, Price } from './ui.jsx';
 
 // The map library is only downloaded when the map is first opened.
@@ -290,6 +291,11 @@ export default function App() {
   const [drawOpts, setDrawOpts] = useState(loadDrawOpts);
   const [vetoes, setVetoes] = useState(loadVetoes);
   const [drawDlg, setDrawDlg] = useState(false);
+  // Our saved points (homes, malls...). Only sent with the PIN, so visitors never get them.
+  const [pois, setPois] = useState([]);
+  const [poiDlg, setPoiDlg] = useState(null); // { draft? }: the "Meus pontos" dialog
+  const [pick, setPick] = useState(null); // the point whose spot is being tapped on the map
+  const [poiFocus, setPoiFocus] = useState(null); // a point just saved, for the map to centre on
   const [online, setOnline] = useState(() => navigator.onLine);
   const filtersBtn = useRef(null);
   const panelWasOpen = useRef(false);
@@ -339,12 +345,14 @@ export default function App() {
   // Every screen that opens on top of the list (map or history, filters, a place, the form, a dialog) adds
   // one step to the browser history, so "back" closes the top one instead of leaving the app.
   // Map and history share one step: switching between them and then pressing back lands on the list.
-  const layers = [view !== 'lista', panelOpen, !!openId, !!form, !!account, drawDlg];
+  // The points dialog and choosing a spot on the map are one step: one replaces the other.
+  const layers = [view !== 'lista', panelOpen, !!openId, !!form, !!account, drawDlg, !!poiDlg || !!pick];
   const depth = layers.filter(Boolean).length;
   const back = useRef({ depth: 0, fromBack: false, ignore: false, closeTop: () => {} });
   back.current.closeTop = () => {
     if (drawDlg) setDrawDlg(false);
     else if (account) { account.onCancel?.(); setAccount(null); }
+    else if (poiDlg || pick) { setPoiDlg(null); setPick(null); }
     else if (form) setForm(null);
     else if (openId) { setOpenId(null); setDrawn(null); }
     else if (panelOpen) setPanelOpen(false);
@@ -401,6 +409,10 @@ export default function App() {
 
   const origin = useMemo(() => {
     if (f.near === 'me') return gps.pos;
+    if (f.near.startsWith('p:')) {
+      const p = pois.find((x) => `p:${x.id}` === f.near);
+      return p ? { lat: p.lat, lng: p.lng } : null;
+    }
     if (f.near.startsWith('b:') && places) {
       const inBairro = places.filter((p) => p.bairro === f.near.slice(2) && p.lat != null);
       if (!inBairro.length) return null;
@@ -410,7 +422,7 @@ export default function App() {
       };
     }
     return null;
-  }, [f.near, gps.pos, places]);
+  }, [f.near, gps.pos, places, pois]);
 
   const withDist = useMemo(
     () => (places || []).map((p) => ({
@@ -469,6 +481,42 @@ export default function App() {
       notify('O PIN mudou. Entre de novo para editar.');
     } else notify(e.message);
   };
+
+  useEffect(() => {
+    if (!auth.token) { setPois([]); return; }
+    let live = true;
+    api.pois(auth.token).then((ps) => { if (live) setPois(ps); }, (e) => { if (live && e.status === 401) fail(e); });
+    return () => { live = false; };
+  }, [auth.token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const byPoiName = (a, b) => a.name.localeCompare(b.name, 'pt-BR');
+  const savePoi = async ({ id, name, icon, lat, lng }) => {
+    try {
+      const saved = id
+        ? await api.updatePoi(id, { name, icon, lat, lng }, auth.token)
+        : await api.addPoi({ name, icon, lat, lng }, auth.token);
+      setPois((ps) => [...ps.filter((p) => p.id !== saved.id), saved].sort(byPoiName));
+      setPoiDlg(null);
+      setPoiFocus({ ...saved });
+      notify(id ? 'Ponto salvo.' : `${saved.name} adicionado ao mapa.`);
+    } catch (e) {
+      if (e.status === 401) { fail(e); setPoiDlg(null); } else throw e;
+    }
+  };
+  const deletePoi = async (id) => {
+    try {
+      await api.removePoi(id, auth.token);
+      setPois((ps) => ps.filter((p) => p.id !== id));
+      if (f.near === `p:${id}`) set({ near: '', radius: 0 });
+      notify('Ponto apagado.');
+    } catch (e) {
+      if (e.status === 401) { fail(e); setPoiDlg(null); } else throw e;
+    }
+  };
+  // "Marcar no mapa": the dialog steps aside, the next tap on the map is the spot, then it comes back.
+  const startPick = (draft) => { setPoiDlg(null); setPick(draft); };
+  const picked = (pos) => { setPoiDlg({ draft: { ...pick, ...pos, picked: true } }); setPick(null); };
+  const cancelPick = () => { setPoiDlg({ draft: pick }); setPick(null); };
 
   const replace = (p) => setPlaces((ps) => ps.map((x) => (x.id === p.id ? p : x)));
 
@@ -556,6 +604,9 @@ export default function App() {
     ...(f.status && f.status !== 'quero' ? [[STATUS.find((s) => s.id === f.status).label, () => set({ status: '' })]] : []),
     ...(f.min ? [[`${f.min}+ estrelas (${WHO.find((w) => w.id === f.who).label})`, () => set({ min: 0 })]] : []),
     ...(f.near.startsWith('b:') ? [[`Perto de ${f.near.slice(2)}`, () => set({ near: '', radius: 0 })]] : []),
+    ...(f.near.startsWith('p:')
+      ? [[`Perto de ${pois.find((p) => `p:${p.id}` === f.near)?.name || 'um ponto salvo'}`, () => set({ near: '', radius: 0 })]]
+      : []),
     ...(f.near && f.radius ? [[`até ${f.radius} km`, () => set({ radius: 0 })]] : []),
   ];
   const drawTuned = drawOpts.fresh || drawOpts.rest || vetoes.length > 0;
@@ -610,7 +661,7 @@ export default function App() {
 
       <div className="layout">
         <FilterPanel
-          f={f} set={set} facets={facets} gps={gps} onLocate={locate} originReady={!!origin}
+          f={f} set={set} facets={facets} gps={gps} onLocate={locate} originReady={!!origin} pois={pois}
           total={list.length} onClear={clear} open={panelOpen} onClose={() => setPanelOpen(false)}
           openCount={openStats.open} withHours={openStats.known} all={withDist.length}
         />
@@ -700,12 +751,17 @@ export default function App() {
             </div>
           )}
 
-          {view === 'mapa' && places && (list.length > 0 || f.open) && (
+          {/* With saved points the map stays up even when nothing matches, so the points are still there. */}
+          {view === 'mapa' && places && (list.length > 0 || f.open || pois.length > 0) && (
             <Suspense fallback={<p className="empty">Abrindo o mapa…</p>}>
               <MapView
                 places={list} me={gps.pos} onLocate={locateForMap}
                 openOnly={f.open} onOpenOnly={(open) => set({ open })} unknownHours={openStats.unknown}
                 onOpen={openPlace}
+                pois={pois} onPois={() => guard(() => setPoiDlg({}))}
+                onPoiNear={(id) => set({ near: `p:${id}`, radius: f.radius || 3 })}
+                onPoiEdit={(p) => guard(() => setPoiDlg({ draft: { ...p } }))}
+                picking={pick} onPicked={picked} onPickCancel={cancelPick} focus={poiFocus}
               />
             </Suspense>
           )}
@@ -772,6 +828,12 @@ export default function App() {
             setAccount(null);
             then?.(a);
           }}
+        />
+      )}
+      {poiDlg && (
+        <Pois
+          pois={pois} auth={auth} draft={poiDlg.draft} onSave={savePoi} onDelete={deletePoi}
+          onPick={startPick} onLocate={locateForMap} onClose={() => setPoiDlg(null)}
         />
       )}
       {drawDlg && (

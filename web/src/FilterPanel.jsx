@@ -41,7 +41,7 @@ function Facet({ title, selected, options, onChange, render = (v) => v, open }) 
 }
 
 export default function FilterPanel({
-  f, set, facets, gps, onLocate, originReady, total, onClear, open, onClose, openCount, withHours, all,
+  f, set, facets, gps, onLocate, originReady, total, onClear, open, onClose, openCount, withHours, all, pois = [],
 }) {
   const closeBtn = useRef(null);
   // Opening the full-screen panel on the phone moves focus into it. The open class makes it visible
@@ -49,7 +49,8 @@ export default function FilterPanel({
   useEffect(() => {
     if (open) closeBtn.current?.focus();
   }, [open]);
-  const nearBairro = f.near.startsWith('b:') ? f.near.slice(2) : '';
+  // Bairros and our saved points share one list; the value is the "near" itself (b:Pinheiros, p:3).
+  const nearPlace = /^[bp]:/.test(f.near) ? f.near : '';
   const prices = new Map(facets.prices);
   return (
     <aside
@@ -81,13 +82,26 @@ export default function FilterPanel({
           {f.near === 'me' && gps.state === 'loading' && <p className="hint">Pegando sua localização…</p>}
           {gps.msg && <p className="hint hint-warn" role="status">{gps.msg}</p>}
           <label className="field-stack">
-            <span>Perto de um bairro</span>
+            <span>{pois.length ? 'Perto de um ponto ou bairro' : 'Perto de um bairro'}</span>
             <select
-              value={nearBairro}
-              onChange={(e) => set(e.target.value ? { near: `b:${e.target.value}` } : { near: '', radius: 0 })}
+              value={nearPlace}
+              onChange={(e) => set(e.target.value ? { near: e.target.value } : { near: '', radius: 0 })}
             >
-              <option value="">Escolha um bairro</option>
-              {facets.origins.map((b) => <option key={b} value={b}>{b}</option>)}
+              <option value="">{pois.length ? 'Escolha um ponto ou bairro' : 'Escolha um bairro'}</option>
+              {/* A saved point that isn't loaded (signed out) still shows as chosen instead of a blank select. */}
+              {nearPlace.startsWith('p:') && !pois.some((p) => `p:${p.id}` === nearPlace) && (
+                <option value={nearPlace}>Ponto salvo</option>
+              )}
+              {pois.length > 0 && (
+                <optgroup label="Meus pontos">
+                  {pois.map((p) => <option key={p.id} value={`p:${p.id}`}>{p.name}</option>)}
+                </optgroup>
+              )}
+              {pois.length > 0 ? (
+                <optgroup label="Bairros">
+                  {facets.origins.map((b) => <option key={b} value={`b:${b}`}>{b}</option>)}
+                </optgroup>
+              ) : facets.origins.map((b) => <option key={b} value={`b:${b}`}>{b}</option>)}
             </select>
           </label>
           {originReady && (
