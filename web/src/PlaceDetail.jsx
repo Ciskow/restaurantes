@@ -139,8 +139,11 @@ function mapLinks(p) {
 
 export default function PlaceDetail({
   place: p, auth, drawn, today, onDrawAgain, onVeto, onDrawOptions, onPatch, onVisit, onNotify, onEdit, onClose,
+  locked, onLogin,
 }) {
   const toggleVisited = () => {
+    // Signed out the visits aren't here, so whether "Já fomos" may be unticked can't be told yet.
+    if (locked) return onLogin();
     if (p.visited && p.visits?.length) return onNotify(VISITED_LOCKED);
     onPatch(p.id, { visited: !p.visited });
   };
@@ -230,7 +233,13 @@ export default function PlaceDetail({
         </div>
 
         <section className="ratings" aria-label="Notas">
-          {PEOPLE.map((person) => {
+          {locked && (
+            <p className="hint locked-note">
+              Notas e visitas só aparecem para quem entra com o PIN.{' '}
+              <button type="button" className="link" onClick={onLogin}>Entrar</button>
+            </p>
+          )}
+          {!locked && PEOPLE.map((person) => {
             const mine = !auth.token || auth.who === person.id;
             return (
               <div key={person.id} className="rating-row">
@@ -255,7 +264,7 @@ export default function PlaceDetail({
           </div>
         </section>
 
-        <Visits place={p} onVisit={onVisit} />
+        {!locked && <Visits place={p} onVisit={onVisit} />}
 
         {p.dish && (
           <section className="section">

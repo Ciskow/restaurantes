@@ -41,7 +41,7 @@ function Facet({ title, selected, options, onChange, render = (v) => v, open }) 
 }
 
 export default function FilterPanel({
-  f, set, facets, gps, onLocate, originReady, total, onClear, open, onClose, openCount, withHours, all, pois = [],
+  f, set, facets, gps, onLocate, originReady, total, onClear, open, onClose, openCount, withHours, all, pois = [], locked,
 }) {
   const closeBtn = useRef(null);
   // Opening the full-screen panel on the phone moves focus into it. The open class makes it visible
@@ -140,7 +140,7 @@ export default function FilterPanel({
           </div>
         </section>
 
-        <section className="facet-static">
+        {!locked && <section className="facet-static">
           <h3>Nota mínima</h3>
           <div className="rating-filter">
             <Stars value={f.min || null} onChange={(n) => set({ min: n || 0 })} size={24} label="Nota mínima" />
@@ -154,7 +154,7 @@ export default function FilterPanel({
               </select>
             </label>
           )}
-        </section>
+        </section>}
 
         <Facet title="Cidade" selected={f.cities} options={facets.cities} onChange={(cities) => set({ cities })} />
         <Facet title="Região" selected={f.regions} options={facets.regions} onChange={(regions) => set({ regions })} />

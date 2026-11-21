@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PEOPLE, api, loadAuth, saveAuth } from './api.js';
+import { PEOPLE, api, forgetPrivate, loadAuth, publicPlace, saveAuth } from './api.js';
 import { REST_DAYS, drawPool, loadDrawOpts, loadVetoes, pick, saveDrawOpts, saveVetoes } from './draw.js';
 import {
   Check, Heart, History as HistoryIcon, List, Map as MapIcon, Plus, Search, Settings, SlidersHorizontal, Star, X,
@@ -109,7 +109,7 @@ function Account({ auth, preset, theme, onTheme, showTheme, onDone, onLogout, on
     <Modal onClose={onClose} className="account" label="Entrar para editar">
       <form onSubmit={submit}>
         <h2>{auth.token ? 'Quem está usando?' : 'Entrar para editar'}</h2>
-        {!auth.token && <p className="hint">Dar nota, adicionar e editar lugares pede o PIN uma vez neste aparelho.</p>}
+        {!auth.token && <p className="hint">Ver e dar notas, ver visitas, adicionar e editar lugares pede o PIN uma vez neste aparelho.</p>}
         <div className="chips" role="radiogroup" aria-label="Quem está usando">
           {PEOPLE.map((p, i) => (
             <button
@@ -335,11 +335,34 @@ export default function App() {
     toastTimer.current = setTimeout(() => setToast(''), 4000);
   }, []);
 
+  // Ratings and visits only come with the PIN, so the list is fetched again on signing in or out.
+  // An answer for a token that is no longer the current one (signed out meanwhile) is dropped.
+  const tokenNow = useRef(auth.token);
+  tokenNow.current = auth.token;
   const load = useCallback(() => {
+    const token = auth.token;
     setLoadError('');
-    api.places().then(setPlaces).catch((e) => setLoadError(e.message));
-  }, []);
+    api.places(token).then(
+      (ps) => { if (tokenNow.current === token) setPlaces(ps); },
+      (e) => {
+        if (tokenNow.current !== token) return;
+        if (e.status === 401) {
+          const cleared = { token: '', who: '' };
+          saveAuth(cleared);
+          setAuth(cleared);
+          notify('O PIN mudou. Entre de novo para ver notas e visitas.');
+        } else setLoadError(e.message);
+      },
+    );
+  }, [auth.token, notify]);
   useEffect(load, [load]);
+  // Signed out: drop ratings and visits from what is on screen and from the offline copy straight away.
+  useEffect(() => {
+    if (auth.token) return;
+    setPlaces((ps) => ps && ps.map(publicPlace));
+    forgetPrivate();
+  }, [auth.token]);
+  const locked = !auth.token;
 
   // ---- the phone's back button ----
   // Every screen that opens on top of the list (map or history, filters, a place, the form, a dialog) adds
@@ -437,7 +460,12 @@ export default function App() {
   );
 
   // Without a known origin the radius cannot be applied yet, so it is ignored instead of hiding everything.
-  const fx = useMemo(() => (origin ? f : { ...f, radius: 0 }), [f, origin]);
+  // Signed out there are no ratings, so a rating filter or order would only empty or shuffle the list.
+  const fx = useMemo(() => ({
+    ...f,
+    ...(origin ? {} : { radius: 0 }),
+    ...(locked ? { min: 0, sort: f.sort === 'rating' ? '' : f.sort } : {}),
+  }), [f, origin, locked]);
   const list = useMemo(() => sortPlaces(withDist.filter((p) => matches(p, fx)), fx), [withDist, fx]);
 
   const facets = useMemo(() => {
@@ -588,7 +616,7 @@ export default function App() {
 
   const closeDetail = () => { setOpenId(null); setDrawn(null); };
   const clear = () => setF({ ...EMPTY, q: f.q, sort: f.sort });
-  const nActive = activeCount(f);
+  const nActive = activeCount(fx);
 
   // Removable summary of what is filtering the list right now.
   const active = [
@@ -602,7 +630,7 @@ export default function App() {
     ...f.kws.map((v) => [`#${v}`, () => set({ kws: f.kws.filter((x) => x !== v) })]),
     // "Aberto agora", "Perto de mim" and "Queremos ir" have their own chips above the list.
     ...(f.status && f.status !== 'quero' ? [[STATUS.find((s) => s.id === f.status).label, () => set({ status: '' })]] : []),
-    ...(f.min ? [[`${f.min}+ estrelas (${WHO.find((w) => w.id === f.who).label})`, () => set({ min: 0 })]] : []),
+    ...(fx.min ? [[`${f.min}+ estrelas (${WHO.find((w) => w.id === f.who).label})`, () => set({ min: 0 })]] : []),
     ...(f.near.startsWith('b:') ? [[`Perto de ${f.near.slice(2)}`, () => set({ near: '', radius: 0 })]] : []),
     ...(f.near.startsWith('p:')
       ? [[`Perto de ${pois.find((p) => `p:${p.id}` === f.near)?.name || 'um ponto salvo'}`, () => set({ near: '', radius: 0 })]]
@@ -661,7 +689,7 @@ export default function App() {
 
       <div className="layout">
         <FilterPanel
-          f={f} set={set} facets={facets} gps={gps} onLocate={locate} originReady={!!origin} pois={pois}
+          f={f} set={set} facets={facets} gps={gps} onLocate={locate} originReady={!!origin} pois={pois} locked={locked}
           total={list.length} onClear={clear} open={panelOpen} onClose={() => setPanelOpen(false)}
           openCount={openStats.open} withHours={openStats.known} all={withDist.length}
         />
@@ -717,8 +745,8 @@ export default function App() {
               {view === 'lista' && (
                 <label className="sort">
                   <span className="sr-only">Ordenar por</span>
-                  <select value={effectiveSort(f)} onChange={(e) => set({ sort: e.target.value })}>
-                    {SORTS.filter((s) => s.id !== 'dist' || f.near).map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                  <select value={effectiveSort(fx)} onChange={(e) => set({ sort: e.target.value })}>
+                    {SORTS.filter((s) => (s.id !== 'dist' || f.near) && (s.id !== 'rating' || !locked)).map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
                 </label>
               )}
@@ -765,7 +793,13 @@ export default function App() {
               />
             </Suspense>
           )}
-          {view === 'historico' && places && list.length > 0 && (
+          {view === 'historico' && locked && (
+            <div className="empty">
+              <p>O histórico de visitas fica só para quem entra com o PIN.</p>
+              <button type="button" className="btn" onClick={() => setAccount({})}>Entrar</button>
+            </div>
+          )}
+          {view === 'historico' && !locked && places && list.length > 0 && (
             <History places={list} filtered={list.length !== places.length} onOpen={openPlace} />
           )}
           {view === 'lista' && (
@@ -798,7 +832,7 @@ export default function App() {
         <PlaceDetail
           key={open.id} place={open} auth={auth} drawn={drawn} today={now.day}
           onDrawAgain={() => draw()} onVeto={veto} onDrawOptions={() => setDrawDlg(true)} onPatch={patch}
-          onVisit={visitOp} onNotify={notify}
+          onVisit={visitOp} onNotify={notify} locked={locked} onLogin={() => setAccount({})}
           onEdit={(p) => guard(() => setForm({ place: p }))} onClose={closeDetail}
         />
       )}

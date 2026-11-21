@@ -156,7 +156,20 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '200kb' }));
 
-app.get('/api/places', (req, res) => res.json(listPlaces()));
+// Ratings and visits are ours: without the PIN the list comes without them. A token that no longer
+// matches (the PIN changed) is refused outright, so the app signs out instead of showing a partial list.
+const PRIVATE = ['rating_ciskow', 'rating_andkiwii', 'visits', 'last_visit'];
+const publicPlace = (p) => {
+  const out = { ...p };
+  for (const key of PRIVATE) delete out[key];
+  return out;
+};
+app.get('/api/places', (req, res) => {
+  res.set({ 'Cache-Control': 'private, no-cache', Vary: 'X-Edit-Token' });
+  const token = req.get('x-edit-token');
+  if (!token) return res.json(listPlaces().map(publicPlace));
+  requireEdit(req, res, () => res.json(listPlaces()));
+});
 
 app.post('/api/login', (req, res) => {
   if (!PIN) return res.status(503).json({ error: 'Defina EDIT_PIN no arquivo .env do servidor.' });
