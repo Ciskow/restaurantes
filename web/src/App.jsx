@@ -8,7 +8,7 @@ import { THEMES, applyTheme, isTheme, loadDeviceTheme, loadTheme, saveDeviceThem
 import { nowSP, openStatus } from './hours.js';
 import {
   EMPTY, SORTS, STATUS, WHO, activeCount, avgRating, effectiveSort, facetCounts, formatKm, fromQuery, km,
-  matches, sortPlaces, toQuery, viewFromQuery,
+  describeSearch, matches, searchHasOperators, sortPlaces, toQuery, viewFromQuery,
 } from './filters.js';
 import FilterPanel from './FilterPanel.jsx';
 import History from './History.jsx';
@@ -544,6 +544,8 @@ export default function App() {
 
   // Removable summary of what is filtering the list right now.
   const active = [
+    // A search with "|" or "+" is spelled out, so it's clear how it was read.
+    ...(searchHasOperators(f.q) ? [[`Busca: ${describeSearch(f.q)}`, () => set({ q: '' }), `busca ${describeSearch(f.q)}`]] : []),
     ...f.cats.map((v) => [v, () => set({ cats: f.cats.filter((x) => x !== v) })]),
     ...f.prices.map((v) => ['$'.repeat(v), () => set({ prices: f.prices.filter((x) => x !== v) }), `preço ${v} de 5`]),
     ...f.cities.map((v) => [v, () => set({ cities: f.cities.filter((x) => x !== v) })]),
@@ -580,6 +582,7 @@ export default function App() {
           <Search size={16} aria-hidden="true" />
           <input
             type="search" placeholder="Buscar lugares" value={f.q}
+            title="Use | para um ou outro (pizza|sushi) e + para exigir os dois (bar+pinheiros)"
             onChange={(e) => set({ q: e.target.value })}
           />
         </label>

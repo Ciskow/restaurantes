@@ -50,15 +50,31 @@ export function avgRating(p) {
   return r.length ? r.reduce((a, b) => a + b, 0) / r.length : null;
 }
 
+// Search: "|" separates alternatives (pizza|sushi = either), "+" or a space joins words that must all
+// be there (pizza+sushi = both). "+" binds tighter: bar+pinheiros|japonês = (bar and pinheiros) or japonês.
+const splitSearch = (q) => String(q ?? '').split('|')
+  .map((alt) => alt.split(/[+\s]+/).filter(Boolean))
+  .filter((words) => words.length);
+
+/** The search as lists of required words, one list per alternative, accents and case removed. */
+export const parseSearch = (q) => splitSearch(norm(q));
+
+/** True when the search uses "|" or "+", so it is worth spelling out what it means. */
+export const searchHasOperators = (q) => /[|+]/.test(String(q ?? '')) && splitSearch(q).length > 0;
+
+/** "pizza|bar+pinheiros" -> "pizza ou bar e pinheiros". */
+export const describeSearch = (q) => splitSearch(q).map((words) => words.join(' e ')).join(' ou ');
+
 const anyOf = (selected, values) => !selected.length || values.some((v) => selected.includes(v));
 
 // One test per facet. Inside a facet the choices are alternatives (Italiano OU Japonês);
 // across facets they all have to hold.
 const TESTS = {
   q(p, f) {
-    if (!f.q.trim()) return true;
+    const alternatives = parseSearch(f.q);
+    if (!alternatives.length) return true;
     const hay = norm([p.name, p.dish, p.notes, p.bairro, p.city, p.address, ...p.categories, ...p.keywords].join(' '));
-    return norm(f.q).split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
+    return alternatives.some((words) => words.every((w) => hay.includes(w)));
   },
   cats: (p, f) => anyOf(f.cats, p.categories),
   cities: (p, f) => anyOf(f.cities, [p.city]),
